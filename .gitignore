@@ -41,8 +41,7 @@
 *.dwo
 
 # Build files and doc
-src/build/*
-app/build/*
+build/*
 
 # Formatter outputs
 */.cache/*
