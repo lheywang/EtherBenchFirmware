@@ -122,6 +122,7 @@ void fx_app_thread_entry(ULONG thread_input) {
 
     uint32_t block_count = card_info.BlockNbr;
     LOG("Detected SD card with %lu blocks.", block_count);
+    LOG("SD : %lu MB", (card_info.BlockNbr / 1048576) * card_info.BlockSize);
     if (block_count == 0) {
         Tx_Error_Handler(SD_HW_INIT_FAILED);
     }

@@ -91,3 +91,10 @@ VOID USBX_USARTBridgeChange(VOID *cdc_instance);
 
 VOID USBX_CMSISDisable(VOID *cmsis_instance);
 VOID USBX_CMSISEnable(VOID *cmsis_instance);
+
+UINT etherbench_ms_vendor_request_handler(ULONG request,
+                                          ULONG value,
+                                          ULONG index,
+                                          ULONG length,
+                                          UCHAR *data_buffer,
+                                          ULONG *data_length);

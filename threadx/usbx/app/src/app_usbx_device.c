@@ -17,11 +17,10 @@
 
 // Descriptors
 #include "descriptors2.h"
-#include "msos2.h"
+#include "msos1.h"
 
 // Local libraries
 #include "app_usbx_device.h"
-#include "app_usbx_msos2.h"
 #include "app_usbx_status.h"
 
 #define LOG_MODULE "USBX_APP"
@@ -93,16 +92,15 @@ UINT MX_USBX_Device_Init(void) {
     /*
      * Launch the USB stack init with the descriptors
      */
-    status = ux_device_stack_initialize(
-        (UCHAR *)&usb_device_desc,
-        sizeof(usb_composite_configuration_tree_t),
-        (UCHAR *)&usb_device_desc,
-        sizeof(usb_composite_configuration_tree_t),
-        (UCHAR *)&usb_device_string_framework,
-        sizeof(usbx_string_framework_t),
-        (UCHAR *)&usb_device_language_framework,
-        sizeof(usbx_language_id_framework_t),
-        USBD_ChangeFunction);
+    status = ux_device_stack_initialize((UCHAR *)&usb_device_desc,
+                                        sizeof(usb_composite_configuration_tree_t),
+                                        (UCHAR *)&usb_device_desc,
+                                        sizeof(usb_composite_configuration_tree_t),
+                                        (UCHAR *)&usb_device_string_framework,
+                                        sizeof(usbx_string_framework_t),
+                                        (UCHAR *)&usb_device_language_framework,
+                                        sizeof(usbx_language_id_framework_t),
+                                        USBD_ChangeFunction);
 
     if (status != UX_SUCCESS)
         Error_Handler();
@@ -112,8 +110,7 @@ UINT MX_USBX_Device_Init(void) {
      *
      * This might look a bit sketchy as it, but that's the ""official"" hack.
      */
-    _ux_system_slave->ux_system_slave_device_vendor_request_function =
-        bsp_usb_custom_request_handler;
+    _ux_device_stack_microsoft_extension_register(0x20, &etherbench_ms_vendor_request_handler);
 
     /*
      * Add the USB classes
@@ -123,8 +120,8 @@ UINT MX_USBX_Device_Init(void) {
     cdc_terminal.ux_slave_class_cdc_acm_instance_deactivate = USBX_TerminalDisable;
     cdc_terminal.ux_slave_class_cdc_acm_parameter_change = USBX_TerminalChange;
 
-    status = ux_device_stack_class_register(
-        (UCHAR *)"cdc_terminal", ux_device_class_cdc_acm_entry, 1, 0, &cdc_terminal);
+    status =
+        ux_device_stack_class_register((UCHAR *)"cdc_terminal", ux_device_class_cdc_acm_entry, 1, 0, &cdc_terminal);
 
     if (status != UX_SUCCESS)
         Error_Handler();
@@ -134,8 +131,7 @@ UINT MX_USBX_Device_Init(void) {
     cdc_usb_usart.ux_slave_class_cdc_acm_instance_deactivate = USBX_USARTBridgeDisable;
     cdc_usb_usart.ux_slave_class_cdc_acm_parameter_change = USBX_USARTBridgeChange;
 
-    status = ux_device_stack_class_register(
-        (UCHAR *)"cdc_vcom", ux_device_class_cdc_acm_entry, 1, 2, &cdc_usb_usart);
+    status = ux_device_stack_class_register((UCHAR *)"cdc_vcom", ux_device_class_cdc_acm_entry, 1, 2, &cdc_usb_usart);
 
     if (status != UX_SUCCESS)
         Error_Handler();
@@ -144,8 +140,8 @@ UINT MX_USBX_Device_Init(void) {
     cmsis_dap.ux_slave_class_dpump_instance_activate = USBX_CMSISEnable;
     cmsis_dap.ux_slave_class_dpump_instance_deactivate = USBX_CMSISDisable;
 
-    status = ux_device_stack_class_register(
-        (UCHAR *)"cmsis_dap", ux_device_class_dpump_entry, 1, 5, (VOID *)&cmsis_dap);
+    status =
+        ux_device_stack_class_register((UCHAR *)"cmsis_dap", ux_device_class_dpump_entry, 1, 4, (VOID *)&cmsis_dap);
 
     if (status != UX_SUCCESS)
         Error_Handler();
@@ -153,17 +149,16 @@ UINT MX_USBX_Device_Init(void) {
     /*
      * Create the main application thread
      */
-    status = tx_thread_create(
-        &ux_device_app_thread,
-        UX_DEVICE_APP_THREAD_NAME,
-        app_ux_device_thread_entry,
-        0,
-        usbx_thread_stack,
-        UX_DEVICE_APP_THREAD_STACK_SIZE,
-        10,
-        10,
-        TX_NO_TIME_SLICE,
-        TX_AUTO_START);
+    status = tx_thread_create(&ux_device_app_thread,
+                              UX_DEVICE_APP_THREAD_NAME,
+                              app_ux_device_thread_entry,
+                              0,
+                              usbx_thread_stack,
+                              UX_DEVICE_APP_THREAD_STACK_SIZE,
+                              10,
+                              10,
+                              TX_NO_TIME_SLICE,
+                              TX_AUTO_START);
 
     if (status != UX_SUCCESS)
         Error_Handler();
@@ -214,12 +209,12 @@ VOID app_ux_device_thread_entry(ULONG thread_input) {
     HAL_PCDEx_PMAConfig(&hpcd_USB_DRD_FS, 0x84, PCD_SNG_BUF, 0x200);
 
     // MSC
-    HAL_PCDEx_PMAConfig(&hpcd_USB_DRD_FS, 0x85, PCD_SNG_BUF, 0x240);
-    HAL_PCDEx_PMAConfig(&hpcd_USB_DRD_FS, 0x05, PCD_SNG_BUF, 0x280);
+    // HAL_PCDEx_PMAConfig(&hpcd_USB_DRD_FS, 0x85, PCD_SNG_BUF, 0x240);
+    // HAL_PCDEx_PMAConfig(&hpcd_USB_DRD_FS, 0x05, PCD_SNG_BUF, 0x280);
 
     // CMSIS-DAP
-    HAL_PCDEx_PMAConfig(&hpcd_USB_DRD_FS, 0x86, PCD_SNG_BUF, 0x2C0);
-    HAL_PCDEx_PMAConfig(&hpcd_USB_DRD_FS, 0x06, PCD_SNG_BUF, 0x300);
+    HAL_PCDEx_PMAConfig(&hpcd_USB_DRD_FS, 0x85, PCD_SNG_BUF, 0x2C0);
+    HAL_PCDEx_PMAConfig(&hpcd_USB_DRD_FS, 0x05, PCD_SNG_BUF, 0x300);
 
     LOG("Configured USB peripheral and endpoints.");
 

@@ -15,15 +15,15 @@
 // ======================================================================
 // Here we're using the ST ones, because the MCU is an ST one.
 // Ensure to use the correct ones !
-#define ST_VENDORID (0x0483)
-#define ST_PRODUCTID (0xEB05)
-#define DEVICE_ID (0x0105)
+#define ST_VENDORID  (0x0483)
+#define ST_PRODUCTID (0xEB08)
+#define DEVICE_ID    (0x0110)
 
 // Here, we're defining values about the strings.
 // This can make sure the compiler will work for us, when needed !
 #define STR_MANUFACTURER "EtherBench Labs"
-#define STR_PRODUCT "EtherBench v1"
-#define STR_SERIAL "EB-2026-0014"
+#define STR_PRODUCT      "EtherBench v1"
+#define STR_SERIAL       "EB-2026-0020"
 
 // Here we define what the task manager show as device names :
 #define STR_COM1 "EtherBench TERMINAL"
@@ -31,7 +31,14 @@
 #define STR_MSC1 "EtherBench FLASH"
 #define STR_DBG1 "EtherBench CMSIS-DAP Debugger"
 
-#define STR_MS_OS_10 "MSFT100\x01"
+// Defining their UTF16LE versions
+#define STR_COM1_MICROSOFT u"EtherBench TERMINAL"
+#define STR_COM2_MICROSOFT u"EtherBench USART"
+#define STR_MSC1_MICROSOFT u"EtherBench FLASH"
+#define STR_DBG1_MICROSOFT u"EtherBench CMSIS-DAP Debugger"
+
+// Standard Microsoft descriptor
+#define STR_MS_OS_10 "MSFT100\x20"
 
 // ======================================================================
 //                                ENUMS

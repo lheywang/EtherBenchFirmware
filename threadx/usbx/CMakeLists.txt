@@ -10,7 +10,6 @@
 set(SOURCES 
 	app/src/app_usbx_device.c
     app/src/app_usbx_status.c
-    app/src/app_usbx_msos2.c
 )
 
 # Common USBX core
@@ -458,7 +457,6 @@ list(APPEND SOURCES
 
 list(APPEND SOURCES
     descriptors/src/descriptors2.c
-    descriptors/src/msos2.c
     descriptors/src/msos1.c
 )
 

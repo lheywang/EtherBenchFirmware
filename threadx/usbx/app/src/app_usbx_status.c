@@ -17,7 +17,9 @@
 
 // Local libraries
 #define LOG_MODULE "USBX_STATUS"
+#include "descriptor_config.h"
 #include "logger.h"
+#include "msos1.h"
 
 // USBX Core Headers
 #include "tx_api.h"
@@ -35,6 +37,13 @@
 extern void usb_push_data(const uint8_t *data, const uint32_t len);
 extern void usb_connect(UX_SLAVE_CLASS_CDC_ACM *cdc_instance);
 extern void usb_disconnect();
+
+// Private functions
+static UINT build_microsoft_friendly_name(const uint16_t *friendly_name,
+                                          size_t name_size,
+                                          ULONG length,
+                                          UCHAR *data_buffer,
+                                          ULONG *data_length);
 
 // ======================================================================
 //                              VARIABLES
@@ -176,4 +185,143 @@ VOID USBX_CMSISEnable(VOID *cmsis_instance) {
     tx_event_flags_set(&usbx_app_flags, USBX_STATUS_CMSIS_CONNECTED, TX_OR);
     LOG("USBX Enabled CMSIS");
     return;
+}
+
+/*
+ * MS OS Descriptor handler.
+ */
+UINT etherbench_ms_vendor_request_handler(ULONG request,
+                                          ULONG value,
+                                          ULONG index,
+                                          ULONG length,
+                                          UCHAR *data_buffer,
+                                          ULONG *data_length) {
+
+    // Unused
+    (void)request;
+    (void)value;
+
+    ULONG response_len = 0;
+    ULONG interface_number = 0;
+
+    /* Is windows requesting the Extended Compat ID ? */
+    switch (index) {
+    case 0x0004:
+
+        /* Fetch the response size of our descriptor. */
+        response_len = sizeof(ms_os_10_compat_id_t);
+
+        if (response_len > length) {
+            response_len = length;
+        }
+
+        /* Copy our buffer to the USBX internal buffer. */
+        ux_utility_memory_copy(data_buffer, (UCHAR *)&ms_os_10_descriptor, response_len);
+
+        /* Updating the size for USBX*/
+        *data_length = response_len;
+
+        /* Ensure some logging to be done !*/
+        LOG("Windows asked 0x0004. Sent our descriptor.");
+
+        return UX_SUCCESS;
+        break;
+
+    case 0x0005:
+
+        /*
+         * Calling the right function, depending on the index that was used.
+         */
+        interface_number = value & 0xFF;
+
+        // Some Usart logs.
+
+        switch (interface_number) {
+
+        case 0x00: // Terminal CDC
+
+            LOG("Windows asked 0x%04x for interface %d", index, interface_number);
+            return build_microsoft_friendly_name(
+                STR_COM1_MICROSOFT, sizeof(STR_COM1_MICROSOFT), length, data_buffer, data_length);
+            break;
+
+        case 0x02: // USB-USART Bridge
+
+            LOG("Windows asked 0x%04x for interface %d", index, interface_number);
+            return build_microsoft_friendly_name(
+                STR_COM2_MICROSOFT, sizeof(STR_COM2_MICROSOFT), length, data_buffer, data_length);
+            break;
+
+        case 0x04: // CMSIS-DAP
+
+            LOG("Windows asked 0x%04x for interface %d", index, interface_number);
+            return build_microsoft_friendly_name(
+                STR_DBG1_MICROSOFT, sizeof(STR_DBG1_MICROSOFT), length, data_buffer, data_length);
+            break;
+
+        default:
+            LOG("Windows asked 0x%04x for interface %d which is unknown to us.", index, interface_number);
+            return UX_ERROR;
+            break;
+        }
+
+        break;
+
+    default:
+
+        /* Ensure some logging to be done !*/
+        LOG("Windows asked 0x%04x. Unknown request.", index);
+
+        /* Unsupported request. */
+        return UX_ERROR;
+        break;
+    }
+}
+
+static UINT build_microsoft_friendly_name(const uint16_t *friendly_name,
+                                          size_t name_size,
+                                          ULONG length,
+                                          UCHAR *data_buffer,
+                                          ULONG *data_length) {
+
+    /*
+     * First, fetch the standard buffer :
+     */
+    ms_os_10_header_t header = {
+        .dwLength = sizeof(ms_os_10_header_t) + name_size,
+        .bcdVersion = 0x0100,
+        .wIndex = 0x0005,
+        .wCount = 0x0001,
+        .dwSize = 40 + name_size,
+        .dwPropertyDataType = 0x00000001,
+        .wPropertyNameLength = sizeof(u"FriendlyName"),
+        .PropertyName = u"FriendlyName",
+        .dwPropertyDataLength = name_size,
+    };
+
+    ULONG total_size = header.dwLength;
+
+    /*
+     * Making sure we have enough memory to work
+     */
+    if (total_size > length) {
+        total_size = length;
+    }
+
+    /*
+     * First, copy the header into the memory
+     */
+    ux_utility_memory_copy(data_buffer, (UCHAR *)&header, sizeof(ms_os_10_header_t));
+
+    /*
+     * Copying the payload right at the end of the buffer, where it shall be.
+     */
+    _ux_utility_memory_copy(data_buffer + sizeof(ms_os_10_header_t), (UCHAR *)friendly_name, name_size);
+
+    /*
+     * Updating the pointer
+     */
+    *data_length = total_size;
+
+    return UX_SUCCESS;
 }
