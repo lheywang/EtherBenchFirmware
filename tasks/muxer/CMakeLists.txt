@@ -14,6 +14,9 @@ set(SOURCES
 # Creating the library
 add_library(MUXER STATIC ${SOURCES})
 
+# Link against some libraries
+target_link_libraries(MUXER THREADX_OS LOGGER)
+
 # Adding the include folder
 target_include_directories(MUXER PUBLIC 
 	${CMAKE_CURRENT_SOURCE_DIR}/include/

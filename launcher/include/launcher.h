@@ -20,9 +20,19 @@
 // ======================================================================
 //                              DEFINES
 // ======================================================================
-#define IDLE_STACK_SIZE 1024
-#define LOGGER_STACK_SIZE 1536
-#define PARSER_STACK_SIZE 2024
+// STACK SIZES
+#define IDLE_STACK_SIZE       1024
+#define LOGGER_STACK_SIZE     1536
+#define PARSER_STACK_SIZE     2024
+#define ROUTER_STACK_SIZE     1024
+#define BOARDCFG_STACK_SIZE   1024
+#define HARDWARE_STACK_SIZE   2048
+#define PROGRAMMER_STACK_SIZE 2048
+#define SEQUENCER_STACK_SIZE  1536
+#define ARGB_STACK_SIZE       1024
+
+// CLIENT FIFO DEPTHS
+#define CLIENT_FIFO_DEPTH 16
 
 // ======================================================================
 //                              FUNCTIONS
