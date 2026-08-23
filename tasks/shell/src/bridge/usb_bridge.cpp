@@ -43,6 +43,7 @@ extern "C" void usb_connect(UX_SLAVE_CLASS_CDC_ACM *cdc_instance) {
     usb_stream.connect(cdc_instance);
     return;
 }
+
 extern "C" void usb_disconnect() {
     usb_stream.disconnect();
     return;

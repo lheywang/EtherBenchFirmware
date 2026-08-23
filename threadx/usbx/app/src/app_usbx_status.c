@@ -20,6 +20,7 @@
 #include "descriptor_config.h"
 #include "logger.h"
 #include "msos1.h"
+#include "task_muxer.h"
 
 // USBX Core Headers
 #include "tx_api.h"
@@ -55,6 +56,9 @@ TX_EVENT_FLAGS_GROUP usbx_app_flags;
 UX_SLAVE_CLASS_CDC_ACM *usbx_terminal = UX_NULL;
 UX_SLAVE_CLASS_CDC_ACM *usbx_bridge = UX_NULL;
 UX_SLAVE_CLASS_DPUMP *usbx_cmsis = UX_NULL;
+
+// Extern
+extern TX_QUEUE router_input; // from launcher.c
 
 // ======================================================================
 //                              FUNCTIONS
@@ -115,11 +119,7 @@ VOID USBX_TerminalDisable(VOID *cdc_instance) {
     // Set some flags
     usbx_terminal = (UX_SLAVE_CLASS_CDC_ACM *)cdc_instance;
     tx_event_flags_set(&usbx_app_flags, ~USBX_STATUS_CDC_TERMINAL_CONNECTED, TX_AND);
-
-    // Call the disconnection function.
     usb_disconnect();
-
-    LOG("USBX Disabled terminal");
     return;
 }
 
@@ -128,10 +128,6 @@ VOID USBX_TerminalEnable(VOID *cdc_instance) {
     // Set some flags
     usbx_terminal = (UX_SLAVE_CLASS_CDC_ACM *)cdc_instance;
     tx_event_flags_set(&usbx_app_flags, USBX_STATUS_CDC_TERMINAL_CONNECTED, TX_OR);
-
-    // Call the connection function.
-    usb_connect(usbx_terminal);
-    LOG("USBX Enabled terminal");
     return;
 }
 
@@ -139,7 +135,30 @@ VOID USBX_TerminalChange(VOID *cdc_instance) {
 
     // Nothing to be done here !
     tx_event_flags_set(&usbx_app_flags, USBX_STATUS_CDC_TERMINAL_CHANGE_REQUIRED, TX_OR);
-    LOG("USBX Changed terminal");
+
+    usbx_terminal = (UX_SLAVE_CLASS_CDC_ACM *)cdc_instance;
+
+    // Ensure our pointers are valids.
+    if (cdc_instance == NULL)
+        return;
+
+    static UINT last_dtr_state = UX_FALSE;
+
+    // Detect the change of the DTR state
+    if (usbx_terminal->ux_slave_class_cdc_acm_data_dtr_state != last_dtr_state) {
+
+        // Update the last known state.
+        last_dtr_state = usbx_terminal->ux_slave_class_cdc_acm_data_dtr_state;
+
+        if (last_dtr_state == UX_TRUE) {
+            usb_connect(usbx_terminal);
+            LOG("Terminal was openned.");
+        }
+    }
+
+    // As that's a pure software port, we don't care about the update of the terminal.
+    // These updates will be passed over software requests.
+
     return;
 }
 
@@ -150,7 +169,6 @@ VOID USBX_USARTBridgeDisable(VOID *cdc_instance) {
 
     usbx_bridge = (UX_SLAVE_CLASS_CDC_ACM *)cdc_instance;
     tx_event_flags_set(&usbx_app_flags, ~USBX_STATUS_CDC_USB_USART_CONNECTED, TX_AND);
-    LOG("USBX Disabled bridge");
     return;
 }
 
@@ -158,13 +176,55 @@ VOID USBX_USARTBridgeEnable(VOID *cdc_instance) {
 
     usbx_bridge = (UX_SLAVE_CLASS_CDC_ACM *)cdc_instance;
     tx_event_flags_set(&usbx_app_flags, USBX_STATUS_CDC_USB_USART_CONNECTED, TX_OR);
-    LOG("USBX Enabled bridge");
     return;
 }
 
 VOID USBX_USARTBridgeChange(VOID *cdc_instance) {
+    // Setting up the required flags
+    usbx_bridge = (UX_SLAVE_CLASS_CDC_ACM *)cdc_instance;
     tx_event_flags_set(&usbx_app_flags, USBX_STATUS_CDC_USB_USART_CHANGE_REQUIRED, TX_OR);
-    LOG("USBX Changed bridge");
+
+    // Ensure our pointers are valids.
+    if (cdc_instance == NULL)
+        return;
+
+    static UINT last_dtr_state = UX_FALSE;
+
+    // Detect the change of the DTR state
+    if (usbx_bridge->ux_slave_class_cdc_acm_data_dtr_state != last_dtr_state) {
+
+        // Update the last known state.
+        last_dtr_state = usbx_bridge->ux_slave_class_cdc_acm_data_dtr_state;
+
+        if (last_dtr_state == UX_TRUE) {
+            // usb_connect(usbx_bridge);
+            LOG("Bridge was openned.");
+        }
+    }
+
+    // As that's a pure software port, we don't care about the update of the terminal.
+    // These updates will be passed over software requests.
+
+    uint32_t payload[4] = {(uint32_t)usbx_terminal->ux_slave_class_cdc_acm_baudrate,
+                           (uint32_t)usbx_terminal->ux_slave_class_cdc_acm_data_bit,
+                           (uint32_t)usbx_terminal->ux_slave_class_cdc_acm_stop_bit,
+                           (uint32_t)usbx_terminal->ux_slave_class_cdc_acm_parity};
+
+    // Build the message payload.
+    struct muxerInput_t *command =
+        create_message(hardwareDestination, usbSource, 0x0001, 0x0000, &payload, sizeof(payload));
+    if (command == NULL) {
+        LOG("An error occured while assembling the payload for the router.");
+        return;
+    }
+
+    // Send the messageto the Queue. If fail, consume it to free it's owned memory.
+    if (tx_queue_send(&router_input, &command, TX_NO_WAIT) != TX_SUCCESS) {
+        LOG("Could not send the config message. Dropping the packet.");
+        consume_message(command);
+    }
+
+    LOG("USBX Changed bridge parameters");
     return;
 }
 

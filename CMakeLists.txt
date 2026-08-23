@@ -144,12 +144,14 @@ add_subdirectory(threadx)
 add_compile_options(-Wextra)
 add_subdirectory(tasks)
 add_subdirectory(launcher)
+add_subdirectory(muxer)
 
 # Add libraries
 # Will need to add TASKS when they're complete !
 target_link_libraries(${PROJECT_NAME} 
     -Wl,--start-group
 	THREADX
+    MUXER
 	TASKS
 	LAUNCHER
     BSP

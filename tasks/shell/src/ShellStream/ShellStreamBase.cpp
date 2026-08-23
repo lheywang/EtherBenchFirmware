@@ -35,8 +35,7 @@ extern TX_QUEUE parser_input;
 //                            CLASS IMPL
 // ======================================================================
 
-ShellStreamBase::ShellStreamBase(
-    char *static_buffer, size_t buffer_size, const char *eol, bool enable_echo) {
+ShellStreamBase::ShellStreamBase(char *static_buffer, size_t buffer_size, const char *eol, bool enable_echo) {
 
     // Copy the base buffer address.
     this->line_buffer = static_buffer;
@@ -149,8 +148,7 @@ void ShellStreamBase::build_request() {
 
     if (alloc_status != TX_SUCCESS) {
         if (this->echo_enabled) {
-            this->transmit(
-                "Could not transmit the command. Could not fetch enough memory.");
+            this->transmit("Could not transmit the command. Could not fetch enough memory.");
         }
         return;
     }

@@ -22,6 +22,7 @@
 // Local libraries
 #include "app_usbx_device.h"
 #include "app_usbx_status.h"
+#include "app_usbx_tasks.h"
 
 #define LOG_MODULE "USBX_APP"
 #include "logger.h"
@@ -58,10 +59,17 @@ extern void Error_Handler();
 // ======================================================================
 // Thread handle
 static TX_THREAD ux_device_app_thread;
+static TX_THREAD ux_terminal_thread;
+static TX_THREAD ux_bridge_thread;
+static TX_THREAD ux_programmer_thread;
 
 // memory buffers
 static __aligned(8) uint8_t usbx_thread_stack[UX_DEVICE_APP_THREAD_STACK_SIZE];
 static __aligned(8) uint8_t ux_memory[UX_SYSTEM_MEM_SIZE];
+
+static __aligned(8) uint8_t terminal_stack[UX_DEVICE_READER_THREAD_STACK_SIZE];
+static __aligned(8) uint8_t bridge_stack[UX_DEVICE_READER_THREAD_STACK_SIZE];
+static __aligned(8) uint8_t programmer_stack[UX_DEVICE_READER_THREAD_STACK_SIZE];
 
 // USBX slaves
 UX_SLAVE_CLASS_CDC_ACM_PARAMETER cdc_terminal = {0};
@@ -162,6 +170,52 @@ UINT MX_USBX_Device_Init(void) {
 
     if (status != UX_SUCCESS)
         Error_Handler();
+
+    /*
+     * Create the sub threads that fetch the USB content
+     */
+    status = tx_thread_create(&ux_terminal_thread,
+                              "TERMINAL RECV TASK",
+                              usbx_terminal_recv_task,
+                              0,
+                              terminal_stack,
+                              sizeof(terminal_stack),
+                              10,
+                              10,
+                              TX_NO_TIME_SLICE,
+                              TX_AUTO_START);
+
+    if (status != UX_SUCCESS)
+        Error_Handler();
+
+    status = tx_thread_create(&ux_bridge_thread,
+                              "BRIDGE RECV TASK",
+                              usbx_bridge_recv_task,
+                              0,
+                              bridge_stack,
+                              sizeof(bridge_stack),
+                              10,
+                              10,
+                              TX_NO_TIME_SLICE,
+                              TX_AUTO_START);
+
+    if (status != UX_SUCCESS)
+        Error_Handler();
+
+    // NOT IMPLEMENTED FOR NOW
+    // status = tx_thread_create(&ux_programmer_thread,
+    //                           "PROGRAMMER RECV TASK",
+    //                           usbx_programmer_recv_task,
+    //                           0,
+    //                           programmer_stack,
+    //                           sizeof(programmer_stack),
+    //                           10,
+    //                           10,
+    //                           TX_NO_TIME_SLICE,
+    //                           TX_AUTO_START);
+
+    // if (status != UX_SUCCESS)
+    //     Error_Handler();
 
     /*
      * Create the communications flags

@@ -73,7 +73,7 @@ TX_BLOCK_POOL router_payloads;
 TX_QUEUE router_input;
 static __aligned(8) uint8_t router_payload_pool[ROUTER_PAYLOAD_POOL_SIZE];
 static __aligned(8) uint8_t router_pool_mem[ROUTER_COMMAND_FIFO_SIZE];
-static __aligned(8) ULONG router_fifo_mem[SHELL_COMMAND_FIFO_DEPTH];
+static __aligned(8) ULONG router_fifo_mem[ROUTER_COMMAND_FIFO_DEPTH];
 
 /*
  * Programmer
@@ -141,12 +141,31 @@ TX_SEMAPHORE flash_dma_done;
 uint32_t launcher(void) {
 
     // -------------------------------------------------------------------
-    // SEMAPHORES
+    // LOGGER
     // -------------------------------------------------------------------
 
     // Logger DMA tasks
     tx_semaphore_create(&dma_trigger, "dma trigger", 0);
     tx_semaphore_create(&dma_tx_done, "dma done", 0);
+
+    /*
+     * Creating the deferred logging task.
+     * We do that first to ensure the messages WILL be deferred, when they could.
+     */
+    tx_thread_create(&logger_thread,
+                     "Deferred Logger",
+                     logger_task,
+                     0,
+                     logger_stack,
+                     LOGGER_STACK_SIZE,
+                     28,
+                     28,
+                     TX_NO_TIME_SLICE,
+                     TX_AUTO_START);
+
+    // -------------------------------------------------------------------
+    // SEMAPHORES
+    // -------------------------------------------------------------------
 
     // FileX
     tx_semaphore_create(&flash_wip, "flash write in progress", 0);
@@ -174,20 +193,6 @@ uint32_t launcher(void) {
     // -------------------------------------------------------------------
     // THREADS
     // -------------------------------------------------------------------
-    /*
-     * Creating the deferred logging task.
-     * We do that first to ensure the messages WILL be deferred, when they could.
-     */
-    tx_thread_create(&logger_thread,
-                     "Deferred Logger",
-                     logger_task,
-                     0,
-                     logger_stack,
-                     LOGGER_STACK_SIZE,
-                     28,
-                     28,
-                     TX_NO_TIME_SLICE,
-                     TX_AUTO_START);
 
     /*
      * Creating the router task
@@ -198,8 +203,8 @@ uint32_t launcher(void) {
                      0,
                      router_stack,
                      ROUTER_STACK_SIZE,
-                     5,
-                     5,
+                     10,
+                     10,
                      TX_NO_TIME_SLICE,
                      TX_AUTO_START);
 

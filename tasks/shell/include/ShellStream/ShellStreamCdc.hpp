@@ -25,14 +25,21 @@
 class ShellStreamCdc : public ShellStreamBase {
   private:
     UX_SLAVE_CLASS_CDC_ACM *cdc_instance;
+    bool welcome_pending = false;
 
   protected:
-    void hw_transmit(const char *data, size_t length) override;
+    void hw_transmit(const char *data, const size_t length) override;
 
   public:
     ShellStreamCdc(char *static_buffer, size_t buffer_size)
-        : ShellStreamBase(static_buffer, buffer_size, "\r\n", true) {}
+        : ShellStreamBase(static_buffer, buffer_size, (const char *)"\r\n", true) {}
 
     void connect(UX_SLAVE_CLASS_CDC_ACM *cdc);
     void disconnect();
+
+    /*
+     * Local override of the process function to ensure we're catching the right moment to send our bannier.
+     */
+    void process(const char *c, const size_t len) override;
+    void process(const char *str) override;
 };

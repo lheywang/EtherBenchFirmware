@@ -73,7 +73,7 @@ struct muxerInput_t *create_message(muxerDestination_t dest,
 
     // Now, we can allocate ourself a structure on the reserved pool :
     muxerInput_t *msg = nullptr;
-    if (tx_block_allocate(&router_pool, (void **)&msg, TX_WAIT_FOREVER) != TX_SUCCESS)
+    if (tx_block_allocate(&router_pool, (void **)&msg, TX_NO_WAIT) != TX_SUCCESS)
         return nullptr;
 
     // Fill the first elements of the message
@@ -84,7 +84,7 @@ struct muxerInput_t *create_message(muxerDestination_t dest,
 
     // Now, allocate some memory if needed
     if ((payload_size != 0) && (payload != nullptr)) {
-        if (tx_block_allocate(&router_payloads, (void **)&msg->payload, TX_WAIT_FOREVER) != TX_SUCCESS) {
+        if (tx_block_allocate(&router_payloads, (void **)&msg->payload, TX_NO_WAIT) != TX_SUCCESS) {
 
             // Free the allocated message
             tx_block_release(msg);
@@ -170,16 +170,15 @@ void muxer_task(ULONG arg) {
     LOG("Enterring the routing task ...");
 
     // Constant process buffer
-    muxerInput_t *cmd = nullptr;
+    muxerInput_t cmd = {};
 
     while (1) {
 
         // Fetching the next word to be pushed :
         tx_queue_receive(&router_input, &cmd, TX_WAIT_FOREVER);
-        if (cmd == nullptr)
-            continue;
 
-        uint32_t dest_mask = (uint32_t)cmd->destination;
+        uint32_t dest_mask = (uint32_t)cmd.destination;
+        uint32_t count = 0;
 
         // Loop while there IS clients to be sent. This ensure an always minimal iteration count, making the router
         // faster.
@@ -193,6 +192,9 @@ void muxer_task(ULONG arg) {
             }
 
             dest_mask &= ~(1U << target);
+            count += 1;
         }
+
+        LOG("Routed packet to %d targets.", count);
     }
 }

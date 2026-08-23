@@ -32,6 +32,8 @@ int main(void) {
         Error_Handler();
 
     // Launch the RTOS
+    // As a quick note, the function call goes over the whole RTOS architecture.
+    // Our custom init function is located in the launcher/src/launcher.c file.
     MX_ThreadX_Init();
 
     /*

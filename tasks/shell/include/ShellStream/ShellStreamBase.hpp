@@ -43,11 +43,7 @@ class ShellStreamBase {
      * Constructors
      */
 
-    ShellStreamBase(
-        char *static_buffer,
-        size_t buffer_size,
-        const char *eol = "\r\n",
-        bool enable_echo = true);
+    ShellStreamBase(char *static_buffer, size_t buffer_size, const char *eol = "\r\n", bool enable_echo = true);
 
     virtual ~ShellStreamBase() = default;
 
@@ -61,6 +57,6 @@ class ShellStreamBase {
     /*
      * Reception API
      */
-    void process(const char *c, const size_t len);
-    void process(const char *str);
+    virtual void process(const char *c, const size_t len);
+    virtual void process(const char *str);
 };
