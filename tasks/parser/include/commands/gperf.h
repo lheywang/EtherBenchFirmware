@@ -25,11 +25,6 @@ struct scpi_command_entry {
     scpi_handler_t handler;
 };
 
-struct shell_command_entry {
-    const char *name;
-    scpi_handler_t handler;
-};
-
 struct keywords_command_entry {
     const char *name;
     int id;
@@ -41,14 +36,11 @@ struct keywords_command_entry {
 /*
  * Find commands functions
  */
-const struct scpi_command_entry *
-find_scpi_command(register const char *str, register size_t len);
+const struct scpi_command_entry *find_scpi_command(register const char *str, register size_t len);
 
-const struct shell_command_entry *
-find_shell_command(register const char *str, register size_t len);
+const struct scpi_command_entry *find_shell_command(register const char *str, register size_t len);
 
-const struct keywords_command_entry *
-find_keywords_command(register const char *str, register size_t len);
+const struct keywords_command_entry *find_keywords_command(register const char *str, register size_t len);
 
 #ifdef __cplusplus
 }

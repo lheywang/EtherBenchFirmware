@@ -70,7 +70,6 @@ void usbx_terminal_recv_task(ULONG arg) {
         // If we read something, send it to the parser.
         if ((status == UX_SUCCESS) && (current_length > 0)) {
             usb_push_data(usbx_terminal_buffer, current_length);
-            LOG("Received %d char(s).", current_length);
         }
     }
 }

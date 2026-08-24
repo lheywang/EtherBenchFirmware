@@ -13,7 +13,7 @@
 //                              INCLUDE
 // ======================================================================
 // Header
-#include "commands/parser_scpi.h"
+#include "commands/parser_shell.h"
 
 // STD
 #include <cstdint>

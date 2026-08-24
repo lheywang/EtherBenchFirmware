@@ -116,7 +116,7 @@ def main():
     )
 
     write_gperf_file(
-        args.out_shell, "shell_command_entry", "commands/parser_shell.h", shell_entries
+        args.out_shell, "scpi_command_entry", "commands/parser_shell.h", shell_entries
     )
 
 

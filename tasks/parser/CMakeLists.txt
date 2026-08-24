@@ -158,29 +158,9 @@ foreach(GPERF_FILE IN LISTS GPERF_FILES)
 endforeach()
 
 # ===============================================
-# CREATE THE GLOBAL LIBRARY
+# ADDING SOURCES TO THE SUPPORT LIB
 # ===============================================
-# Creating the library
-add_library(GPERF STATIC ${GPERF_SOURCES})
-
-target_compile_options(GPERF PRIVATE
-    -Wno-missing-field-initializers 
-    -Wno-unused-parameter 
-    -Wno-old-style-definition
-)
-
-target_link_libraries(GPERF PARSER)
-
-# Adding the include folder
-target_include_directories(GPERF PUBLIC 
-	${CMAKE_CURRENT_SOURCE_DIR}/include/
-)
-
-# ===============================================
-# FINALLY : CREATE CALLBACK THE LIBRARY
-# ===============================================
-# Add the common function sources
-list(APPEND SOURCES
+list(APPEND GPERF_SOURCES
     src/commands/scpi/custom/actions/scpi_actions_get_r.cpp
     src/commands/scpi/custom/actions/scpi_actions_reset.cpp
     src/commands/scpi/custom/actions/scpi_actions_set.cpp
@@ -242,13 +222,14 @@ list(APPEND SOURCES
     src/commands/scpi/minimal/scpi_wai.cpp
 )
 
-list(APPEND SOURCES
+list(APPEND GPERF_SOURCES
     src/commands/shell/custom/shell_actions.cpp
     src/commands/shell/custom/shell_analog.cpp
     src/commands/shell/custom/shell_conf.cpp
     src/commands/shell/custom/shell_io.cpp
     src/commands/shell/custom/shell_log.cpp
     src/commands/shell/custom/shell_prog.cpp
+    src/commands/shell/custom/shell_scan.cpp
     src/commands/shell/custom/shell_seq.cpp
     src/commands/shell/custom/shell_spy.cpp
     src/commands/shell/minimal/shell_cat.cpp
@@ -261,12 +242,16 @@ list(APPEND SOURCES
     src/commands/shell/minimal/shell_pwd.cpp
 )
 
-list(APPEND SOURCES
+# ===============================================
+# FINAL OUTPUT LIBRARY
+# ===============================================
+# Add the sources
+list(APPEND GPERF_SOURCES
     src/task_parser.cpp
 )
 
 # Creating the library
-add_library(PARSER STATIC ${SOURCES})
+add_library(PARSER STATIC ${GPERF_SOURCES})
 
 # Link against some libraries
 target_link_libraries(PARSER THREADX_OS LOGGER SHELL)
