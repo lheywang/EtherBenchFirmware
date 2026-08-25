@@ -22,4 +22,4 @@
 //                              FUNCTIONS
 // ======================================================================
 
-int shell_ls(char *args, void *context) { return 0; }
+int shell_ls(char *args, void *context) { return 1; }

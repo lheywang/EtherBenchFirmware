@@ -11,6 +11,10 @@ set(SOURCES
 	src/task_configuration.cpp
 )
 
+list(APPEND SOURCES
+    src/assets/font.c
+)
+
 # Creating the library
 add_library(CONFIG STATIC ${SOURCES})
 

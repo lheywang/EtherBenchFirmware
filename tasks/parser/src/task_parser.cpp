@@ -151,7 +151,7 @@ void parser_task(ULONG arg) {
 
         // Inform the user of the fail, and let him cry. We don't have more informations than him.
         if (retval != 0) {
-            stream->transmit("Command failed to execute with an error code : %d", retval);
+            LOG("Command failed to execute with an error code : %d", retval);
         }
 
         // Free the command we received.

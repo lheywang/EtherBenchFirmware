@@ -23,8 +23,21 @@ extern "C" {
 #include "app_threadx.h"
 #include "logger.h"
 
+// RTOS
+#include "tx_api.h"
+
 // STD
 #include <stdint.h>
+
+// ======================================================================
+//                              COMMON
+// ======================================================================
+// Returns codes. These are aliases to the standard ThreadX one to not
+// add another layer of valid returns codes.
+#define CMD_OK                 TX_SUCCESS
+#define CMD_REFUSED            TX_ERROR
+#define CMD_INVALID_PAYLOAD    TX_PTR_ERROR
+#define CMD_RESSOURCE_RESERVED TX_PRIORITY_ERROR
 
 // ======================================================================
 //                              TYPEDEFS
