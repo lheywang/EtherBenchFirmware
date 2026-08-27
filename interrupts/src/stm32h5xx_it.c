@@ -88,3 +88,5 @@ void GPDMA1_Channel0_IRQHandler(void) { HAL_DMA_IRQHandler(&hdma_usart3_tx); }
 void GPDMA1_Channel4_IRQHandler(void) { HAL_DMA_IRQHandler(&handle_GPDMA1_octospiTX); }
 
 void GPDMA1_Channel5_IRQHandler(void) { HAL_DMA_IRQHandler(&handle_GPDMA1_octospiRX); }
+
+void GPDMA2_Channel0_IRQHandler(void) { HAL_DMA_IRQHandler(&handle_GPDMA2_Channel0); }

@@ -47,16 +47,16 @@ extern "C" {
 
 // -------------------------------------
 // Effects parameters
-#define WS2812_FLASH_PERIOD_MS LEDS_T_Hz(5)
-#define WS2812_SPIN_PERIOD_MS LEDS_T_Hz(20)
+#define WS2812_FLASH_PERIOD_MS     LEDS_T_Hz(5)
+#define WS2812_SPIN_PERIOD_MS      LEDS_T_Hz(20)
 #define WS2812_BREATHING_PERIOD_MS LEDS_T_Hz(30)
 
-#define WS2812_VU_METER_PERIOD_MS LEDS_T_Hz(50)
-#define WS2812_RAINBOW_PERIOD_MS LEDS_T_Hz(20)
+#define WS2812_VU_METER_PERIOD_MS  LEDS_T_Hz(50)
+#define WS2812_RAINBOW_PERIOD_MS   LEDS_T_Hz(20)
 #define WS2812_HEARTBEAT_PERIOD_MS LEDS_T_Hz(30)
 
 /* Actually unused, we just stop the timer*/
-#define WS2812_SOLID_PERIOD_MS LEDS_T_Hz(1)
+#define WS2812_SOLID_PERIOD_MS    LEDS_T_Hz(1)
 #define WS2812_PROGRESS_PERIOD_MS LEDS_T_Hz(1)
 // ======================================================================
 //                              STRUCTS
@@ -80,7 +80,7 @@ class LedsWS2812 : public LedsBase {
 
   private:
     // Raw led buffer
-    uint16_t __aligned(32) leds_buffer[(LED_RING_BIT_PER_PIXEL * LED_RING_PIXEL_NB) + 1];
+    uint32_t __aligned(32) leds_buffer[(LED_RING_BIT_PER_PIXEL * LED_RING_PIXEL_NB) + 64];
     // Pixel buffer
     Pixel pixel_buffer[LED_RING_PIXEL_NB];
 
@@ -132,24 +132,43 @@ class LedsWS2812 : public LedsBase {
     void on_timer_tick(ULONG arg) override;
 
   public:
-    LedsWS2812(
-        TX_TIMER *timer,
-        TIM_HandleTypeDef *htim,
-        uint32_t timer_channel,
-        uint32_t TimerFreq);
-
-    LedsWS2812(
-        TX_TIMER *timer,
-        const char *timer_name,
-        TIM_HandleTypeDef *htim,
-        uint32_t timer_channel,
-        uint32_t TimerFreq);
+    LedsWS2812(TX_TIMER *timer, TIM_HandleTypeDef *htim, uint32_t timer_channel, uint32_t TimerFreq);
+    LedsWS2812(TX_TIMER *timer,
+               const char *timer_name,
+               TIM_HandleTypeDef *htim,
+               uint32_t timer_channel,
+               uint32_t TimerFreq);
 
     ~LedsWS2812();
 
+    /**
+     * @brief Initialize the hardware and the software timer.
+     *        Enable to auto-refresh the effect without requiring on a precise time base.
+     *
+     */
+    void init();
+
+    /**
+     * @brief Set a new effect on the led ring. Can be called from anywhere.
+     *
+     * @param new_effect The PixelEffect struct to be applied.
+     */
     void set_effect(const PixelEffect new_effect);
+
+    /**
+     * @brief Update the effect status in the loop.
+     *
+     * @param progress
+     */
     void set_effect_progress(uint8_t progress);
+    void set_effect_progress();
 };
+
+/**
+ * @brief ISR routine to be used to conclude the refresh pulse.
+ *
+ */
+void ISR_EndRefresh();
 
 #ifdef __cplusplus
 }

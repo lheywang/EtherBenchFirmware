@@ -115,7 +115,10 @@ void MX_TIM2_Init(void) {
         Error_Handler();
     }
 
+    __HAL_TIM_ENABLE_DMA(&htim2, TIM_DMA_UPDATE);
+
     HAL_TIM_MspPostInit(&htim2);
+
     return;
 }
 
@@ -135,7 +138,7 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *tim_pwmHandle) {
         handle_GPDMA1_Channel1.Init.SrcInc = DMA_SINC_INCREMENTED;
         handle_GPDMA1_Channel1.Init.DestInc = DMA_DINC_FIXED;
         handle_GPDMA1_Channel1.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_HALFWORD;
-        handle_GPDMA1_Channel1.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE;
+        handle_GPDMA1_Channel1.Init.DestDataWidth = DMA_DEST_DATAWIDTH_BYTE; // ???
         handle_GPDMA1_Channel1.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
         handle_GPDMA1_Channel1.Init.SrcBurstLength = 1;
         handle_GPDMA1_Channel1.Init.DestBurstLength = 1;
@@ -165,19 +168,20 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef *tim_baseHandle) {
         /* TIM2 DMA Init */
         /* GPDMA2_REQUEST_TIM2_CH1 Init */
         handle_GPDMA2_Channel0.Instance = GPDMA2_Channel0;
-        handle_GPDMA2_Channel0.Init.Request = GPDMA2_REQUEST_TIM2_CH1;
+        handle_GPDMA2_Channel0.Init.Request = GPDMA2_REQUEST_TIM2_UP;
         handle_GPDMA2_Channel0.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
         handle_GPDMA2_Channel0.Init.Direction = DMA_MEMORY_TO_PERIPH;
         handle_GPDMA2_Channel0.Init.SrcInc = DMA_SINC_INCREMENTED;
         handle_GPDMA2_Channel0.Init.DestInc = DMA_DINC_FIXED;
-        handle_GPDMA2_Channel0.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_HALFWORD;
-        handle_GPDMA2_Channel0.Init.DestDataWidth = DMA_DEST_DATAWIDTH_HALFWORD;
+        handle_GPDMA2_Channel0.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_WORD;
+        handle_GPDMA2_Channel0.Init.DestDataWidth = DMA_DEST_DATAWIDTH_WORD;
         handle_GPDMA2_Channel0.Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
         handle_GPDMA2_Channel0.Init.SrcBurstLength = 1;
         handle_GPDMA2_Channel0.Init.DestBurstLength = 1;
-        handle_GPDMA2_Channel0.Init.TransferAllocatedPort = DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT0;
+        handle_GPDMA2_Channel0.Init.TransferAllocatedPort = DMA_SRC_ALLOCATED_PORT1 | DMA_DEST_ALLOCATED_PORT0;
         handle_GPDMA2_Channel0.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
         handle_GPDMA2_Channel0.Init.Mode = DMA_NORMAL;
+
         if (HAL_DMA_Init(&handle_GPDMA2_Channel0) != HAL_OK) {
             Error_Handler();
         }
@@ -190,6 +194,7 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef *tim_baseHandle) {
     }
     return;
 }
+
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *timHandle) {
 
     GPIO_InitTypeDef GPIO_InitStruct = {0};

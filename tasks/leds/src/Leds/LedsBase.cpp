@@ -43,14 +43,13 @@ UINT LedsBase::init_timer(const char *name) {
 
     // Just create a new timer if it was not already created.
     if (this->timer_status == 0) {
-        return tx_timer_create(
-            this->timer,
-            const_cast<CHAR *>(name),
-            LedsBase::timer_callback,
-            reinterpret_cast<ULONG>(this),
-            0,
-            0,
-            TX_NO_ACTIVATE);
+        return tx_timer_create(this->timer,
+                               const_cast<CHAR *>(name),
+                               LedsBase::timer_callback,
+                               reinterpret_cast<ULONG>(this),
+                               1,
+                               0,
+                               TX_NO_ACTIVATE);
     }
 
     return 1000;

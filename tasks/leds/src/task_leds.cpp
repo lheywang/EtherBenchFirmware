@@ -48,7 +48,7 @@ TX_TIMER flash_orange_timer;
 TX_TIMER flash_green_timer;
 TX_TIMER status_timer;
 
-LedsWS2812 ring = LedsWS2812(&ring_timer, "RING LED TIMER", &htim1, 1, 250000);
+LedsWS2812 ring = LedsWS2812(&ring_timer, "RING LED TIMER", &htim2, TIM_CHANNEL_1, 250000000);
 LedsBlinker eth_green = LedsBlinker(&eth_green_timer, LED_GREEN_GPIO_Port, LED_GREEN_Pin);
 
 // ======================================================================
@@ -68,16 +68,17 @@ void leds_task(ULONG arg) {
     TX_PARAMETER_NOT_USED(arg);
 
     Pixel a = {._raw = 0xFFFFFFFF};
+    Pixel b = {._raw = 0x0F070707};
 
-    PixelEffect test = {
-        .type = leds_effects::EFFECT_BREATHING,
-        .primary = a,
-        .secondary = a,
-        .speed = 50,
-        .width = 50,
-        .progress = 50,
-        .tick = 0};
+    PixelEffect test = {.type = leds_effects::EFFECT_HEARTBEAT,
+                        .primary = a,
+                        .secondary = b,
+                        .speed = 50,
+                        .width = 50,
+                        .progress = 50,
+                        .tick = 50};
 
+    ring.init();
     ring.set_effect(test);
 
     /*

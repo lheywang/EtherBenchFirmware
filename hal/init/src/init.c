@@ -53,6 +53,7 @@ uint32_t init(void) {
 
     // Initialize DMA
     MX_GPDMA1_Init();
+    MX_GPDMA2_Init();
 
     // Initialize Cortex M33 :
     MX_DCACHE1_Init();
