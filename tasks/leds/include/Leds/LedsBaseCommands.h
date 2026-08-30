@@ -23,22 +23,22 @@ extern "C" {
 //                              DEFINES
 // ======================================================================
 // Macros to configure the frequencies
-#define LEDS_F_Hz(x) (x)
+#define LEDS_F_Hz(x)  (x)
 #define LEDS_F_kHz(x) (LEDS_F_Hz(x) * 1000)
 #define LEDS_F_MHz(x) (LEDS_F_kHz(x) * 1000)
 
 // Macros to configure the periods
-#define LEDS_T_Hz(x) (1000 / LEDS_F_Hz(x))
+#define LEDS_T_Hz(x)  (1000 / LEDS_F_Hz(x))
 #define LEDS_T_kHz(x) (1000 / LEDS_F_kHz(x))
 #define LEDS_T_MHz(x) (1000 / LEDS_F_MHz(x))
 
 // Leds specs (included here for C compatibility)
-#define LED_RING_PIXEL_NB 10 // Will be 20 on the final version.
+#define LED_RING_PIXEL_NB      10 // Will be 20 on the final version.
 #define LED_RING_BIT_PER_PIXEL 24
 
 // Effects configs
 #define LED_RING_BREATH_LENGTH 600
-#define LED_RING_BREATH_MAX 255
+#define LED_RING_BREATH_MAX    255
 
 // ======================================================================
 //                              STRUCTS
@@ -66,6 +66,7 @@ union Pixel {
 //                              ENUMS
 // ======================================================================
 enum leds_effects {
+    EFFECT_NONE,
     EFFECT_FLASH,
     EFFECT_SOLID,
     EFFECT_SPIN,

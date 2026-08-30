@@ -53,7 +53,7 @@ extern "C" {
 
 #define WS2812_VU_METER_PERIOD_MS  LEDS_T_Hz(50)
 #define WS2812_RAINBOW_PERIOD_MS   LEDS_T_Hz(20)
-#define WS2812_HEARTBEAT_PERIOD_MS LEDS_T_Hz(30)
+#define WS2812_HEARTBEAT_PERIOD_MS LEDS_T_Hz(5)
 
 /* Actually unused, we just stop the timer*/
 #define WS2812_SOLID_PERIOD_MS    LEDS_T_Hz(1)

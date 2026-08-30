@@ -67,13 +67,13 @@ LedsBlinker eth_green = LedsBlinker(&eth_green_timer, LED_GREEN_GPIO_Port, LED_G
 void leds_task(ULONG arg) {
     TX_PARAMETER_NOT_USED(arg);
 
-    Pixel a = {._raw = 0xFFFFFFFF};
-    Pixel b = {._raw = 0x0F070707};
+    Pixel a = {.aRGB = {.alpha = 0xFF, .g = 0x00, .r = 0xFF, .b = 0x10}};
+    Pixel b = {.aRGB = {.alpha = 0xFF, .g = 0xFF, .r = 0x00, .b = 0x10}};
 
-    PixelEffect test = {.type = leds_effects::EFFECT_HEARTBEAT,
+    PixelEffect test = {.type = leds_effects::EFFECT_SPIN,
                         .primary = a,
                         .secondary = b,
-                        .speed = 50,
+                        .speed = 2,
                         .width = 50,
                         .progress = 50,
                         .tick = 50};
@@ -87,5 +87,6 @@ void leds_task(ULONG arg) {
     while (1) {
         tx_thread_sleep(50);
         HAL_GPIO_TogglePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
+        ring.set_effect_progress();
     }
 }

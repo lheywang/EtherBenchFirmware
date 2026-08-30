@@ -75,6 +75,18 @@ constexpr std::array<uint8_t, HEARTBEAT_SAMPLES> generate_heartbeat_lut() {
 constexpr auto heartbeat_lut = generate_heartbeat_lut();
 
 // ======================================================================
+//                              PRIVATES
+// ======================================================================
+ULONG getThreadXTimerCounts(uint32_t ms) {
+
+    if (ms < 10) {
+        return 1;
+    } else {
+        return (ms / 10) + 1;
+    }
+}
+
+// ======================================================================
 //                              CLASS IMPL.
 // ======================================================================
 LedsWS2812::LedsWS2812(TX_TIMER *timer, TIM_HandleTypeDef *htim, uint32_t timer_channel, uint32_t TimerFreq)
@@ -101,6 +113,7 @@ LedsWS2812::LedsWS2812(TX_TIMER *timer,
     this->htim = htim;
     this->timer_channel = timer_channel;
     this->timer_freq = TimerFreq;
+    this->previous_effect = leds_effects::EFFECT_NONE;
 
     return;
 }
@@ -277,6 +290,12 @@ void LedsWS2812::send_buffer() {
 
     HAL_StatusTypeDef ret = HAL_OK;
 
+    HAL_TIM_StateTypeDef status = HAL_TIM_PWM_GetState(this->htim);
+    if (status != HAL_TIM_STATE_READY) {
+        LOG("Cannot send the buffer. An operation is already running...");
+        return;
+    }
+
     // Stop any current DMA transfers
     ret = HAL_TIM_PWM_Stop_DMA(this->htim, this->timer_channel);
     if (ret != HAL_OK) {
@@ -284,7 +303,8 @@ void LedsWS2812::send_buffer() {
     }
 
     // Flush the caches
-    ret = HAL_DCACHE_CleanByAddr(&hdcache1, reinterpret_cast<uint32_t *>(this->leds_buffer), sizeof(this->leds_buffer));
+    ret = HAL_DCACHE_CleanByAddr(
+        &hdcache1, reinterpret_cast<uint32_t *>(this->leds_buffer), (sizeof(this->leds_buffer) + 31) & ~31);
     if (ret != HAL_OK) {
         LOG("WARNING : Failed cleaning the cache for the DMA. Status is %d", (int)ret);
     }
@@ -314,7 +334,6 @@ void LedsWS2812::set_effect(const PixelEffect new_effect) {
      * This will write to the leds
      */
     memcpy(&this->current_effect, &new_effect, sizeof(PixelEffect));
-    this->refresh_leds();
 
     /*
      * Restart the timer with the new parameters
@@ -322,30 +341,40 @@ void LedsWS2812::set_effect(const PixelEffect new_effect) {
     switch (this->current_effect.type) {
 
     case leds_effects::EFFECT_FLASH:
-        this->start_timer(WS2812_FLASH_PERIOD_MS);
+        this->start_timer(getThreadXTimerCounts(WS2812_FLASH_PERIOD_MS));
+        LOG("Configured effect FLASH");
         break;
 
     case leds_effects::EFFECT_SPIN:
-        this->start_timer(WS2812_SPIN_PERIOD_MS);
+        this->start_timer(getThreadXTimerCounts(WS2812_SPIN_PERIOD_MS));
+        LOG("Configured effect SPIN");
         break;
 
     case leds_effects::EFFECT_BREATHING:
-        this->start_timer(WS2812_BREATHING_PERIOD_MS);
+        this->start_timer(getThreadXTimerCounts(WS2812_BREATHING_PERIOD_MS));
+        LOG("Configured effect BREATHING");
         break;
     case leds_effects::EFFECT_PROGRESS:
-        this->start_timer(WS2812_PROGRESS_PERIOD_MS);
+        this->start_timer(getThreadXTimerCounts(WS2812_PROGRESS_PERIOD_MS));
+        LOG("Configured effect PROGRESS");
         break;
 
     case leds_effects::EFFECT_VU_METER:
-        this->start_timer(WS2812_VU_METER_PERIOD_MS);
+        this->start_timer(getThreadXTimerCounts(WS2812_VU_METER_PERIOD_MS));
+        LOG("Configured effect VU-METER");
+
         break;
 
     case leds_effects::EFFECT_RAINBOW:
-        this->start_timer(WS2812_RAINBOW_PERIOD_MS);
+        this->start_timer(getThreadXTimerCounts(WS2812_RAINBOW_PERIOD_MS));
+        LOG("Configured effect RAINBOW");
+
         break;
 
     case leds_effects::EFFECT_HEARTBEAT:
-        this->start_timer(WS2812_HEARTBEAT_PERIOD_MS);
+        this->start_timer(getThreadXTimerCounts(WS2812_HEARTBEAT_PERIOD_MS));
+        LOG("Configured effect HEARTBEAT");
+
         break;
 
     default:
@@ -365,21 +394,25 @@ void LedsWS2812::set_effect_progress(uint8_t progress) {
 }
 
 void LedsWS2812::set_effect_progress() {
-    this->set_effect_progress((this->current_effect.progress++) & 0xFF);
+    this->set_effect_progress((this->current_effect.progress++));
     return;
 }
 
 void LedsWS2812::effect_flash() {
 
     // Swap the tick value between 0 and 1
-    this->current_effect.tick = 1 - this->current_effect.tick;
+    this->current_effect.tick += 1;
+
+    if (this->current_effect.tick > 10) {
+        this->current_effect.tick = 0;
+    }
 
     // Select the target colour
-    Pixel temp = (this->current_effect.tick == 1) ? this->current_effect.primary : this->current_effect.secondary;
+    Pixel *temp = (this->current_effect.tick > 5) ? &this->current_effect.primary : &this->current_effect.secondary;
 
     // Update the pixels
     for (int pixel = 0; pixel < LED_RING_PIXEL_NB; pixel += 1) {
-        this->pixel_buffer[pixel] = this->apply_alpha(&temp, gamma_lut[temp.aRGB.alpha]);
+        this->pixel_buffer[pixel] = this->apply_alpha(temp, gamma_lut[temp->aRGB.alpha]);
     }
 
     return;
@@ -409,6 +442,7 @@ void LedsWS2812::effect_breathing() {
     // Handle the tick counter update
     uint16_t local_tick = 0;
     this->current_effect.tick += 1;
+
     if (this->current_effect.tick <= LED_RING_BREATH_MAX) {
         local_tick = this->current_effect.tick;
 
@@ -422,6 +456,8 @@ void LedsWS2812::effect_breathing() {
         this->current_effect.tick = 0;
         local_tick = 0;
     }
+
+    LOG("Local tick = %d", local_tick);
 
     // Fetch the gamma for that value
     uint8_t Intensity = gamma_lut[(uint8_t)local_tick];
@@ -463,6 +499,8 @@ void LedsWS2812::effect_spin() {
         int8_t index = this->current_effect.tick - pixel;
         if (index < 0) {
             index = LED_RING_PIXEL_NB + index;
+        } else if (index >= LED_RING_PIXEL_NB) {
+            index = LED_RING_PIXEL_NB;
         }
 
         this->pixel_buffer[index] = this->apply_alpha(&this->current_effect.primary, intensities[index]);
@@ -534,11 +572,11 @@ void LedsWS2812::effect_vu_meter() {
 
 void LedsWS2812::effect_rainbow() {
 
-    // Get the offset to be applied
-    uint8_t offset = (this->current_effect.tick * this->current_effect.speed) & 0xFF;
-
     // Increment the tick
     this->current_effect.tick += 1;
+
+    // Get the offset to be applied
+    uint8_t offset = (this->current_effect.tick * this->current_effect.speed) & 0xFF;
 
     // Reset the tick when we hit 0
     if (offset == 0) {
@@ -592,20 +630,10 @@ inline Pixel LedsWS2812::apply_alpha(Pixel *input, uint8_t alpha) {
 
     Pixel output;
 
-    // Just checks to save useless CPU cycles.
-    if (alpha == 0) {
-        output.aRGB.r = 0;
-        output.aRGB.g = 0;
-        output.aRGB.b = 0;
-    } else if (alpha == LED_CORR_MAXVAL) {
-        output.aRGB.r = input->aRGB.r;
-        output.aRGB.g = input->aRGB.g;
-        output.aRGB.b = input->aRGB.b;
-    } else {
-        output.aRGB.r = (input->aRGB.r * alpha) / 255;
-        output.aRGB.g = (input->aRGB.g * alpha) / 255;
-        output.aRGB.b = (input->aRGB.b * alpha) / 255;
-    }
+    output.aRGB.r = (uint8_t)(((uint32_t)input->aRGB.r * alpha) / 255);
+    output.aRGB.g = (uint8_t)(((uint32_t)input->aRGB.g * alpha) / 255);
+    output.aRGB.b = (uint8_t)(((uint32_t)input->aRGB.b * alpha) / 255);
+    output.aRGB.alpha = alpha;
 
     return output;
 }
