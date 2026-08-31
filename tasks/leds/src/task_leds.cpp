@@ -70,11 +70,11 @@ void leds_task(ULONG arg) {
     Pixel a = {.aRGB = {.alpha = 0xFF, .g = 0x00, .r = 0xFF, .b = 0x10}};
     Pixel b = {.aRGB = {.alpha = 0xFF, .g = 0xFF, .r = 0x00, .b = 0x10}};
 
-    PixelEffect test = {.type = leds_effects::EFFECT_SPIN,
+    PixelEffect test = {.type = leds_effects::EFFECT_PROGRESS,
                         .primary = a,
                         .secondary = b,
                         .speed = 2,
-                        .width = 50,
+                        .width = 5,
                         .progress = 50,
                         .tick = 50};
 

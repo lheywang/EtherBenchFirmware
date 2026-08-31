@@ -360,8 +360,8 @@ void LedsWS2812::set_effect(const PixelEffect new_effect) {
         break;
 
     case leds_effects::EFFECT_VU_METER:
-        this->start_timer(getThreadXTimerCounts(WS2812_VU_METER_PERIOD_MS));
-        LOG("Configured effect VU-METER");
+        // this->start_timer(getThreadXTimerCounts(WS2812_VU_METER_PERIOD_MS));
+        LOG("Deprecated mode : VU-METER. No effect where applied.");
 
         break;
 
@@ -385,16 +385,13 @@ void LedsWS2812::set_effect(const PixelEffect new_effect) {
 }
 
 void LedsWS2812::set_effect_progress(uint8_t progress) {
-
     this->current_effect.progress = progress & 0xFF;
-
-    // Trigger the refresh to update the status.
-    this->refresh_leds();
     return;
 }
 
 void LedsWS2812::set_effect_progress() {
-    this->set_effect_progress((this->current_effect.progress++));
+    uint8_t progress = this->current_effect.progress += 1;
+    this->set_effect_progress(progress);
     return;
 }
 
@@ -475,15 +472,27 @@ void LedsWS2812::effect_spin() {
     // Handle the tick update
     if (this->current_effect.tick < LED_RING_PIXEL_NB) {
         this->current_effect.tick += 1;
-
     } else {
         this->current_effect.tick = 0;
     }
 
     // Compute the leds statuses
-    uint8_t intensities[LED_RING_PIXEL_NB] = {0};
-    for (int tail_pos = 0; tail_pos < this->current_effect.width; tail_pos += 1) {
-        intensities[tail_pos] = gamma_lut[LED_CORR_MAXVAL - (tail_pos * LED_CORR_MAXVAL) / this->current_effect.width];
+    uint8_t intensities[LED_RING_PIXEL_NB] = {};
+
+    uint8_t width = this->current_effect.width % LED_RING_PIXEL_NB;
+    width = (width == 0) ? 1 : width;
+    uint8_t step = LED_CORR_MAXVAL / width;
+
+    uint8_t lum = LED_CORR_MAXVAL;
+
+    for (int tail_pos = 0; tail_pos < LED_RING_PIXEL_NB; tail_pos += 1) {
+        intensities[tail_pos] = gamma_lut[lum];
+
+        if (lum > step) {
+            lum -= step;
+        } else {
+            lum = 0;
+        }
     }
 
     /*
@@ -495,15 +504,12 @@ void LedsWS2812::effect_spin() {
 
     // Apply the leds to the effects :
     for (int pixel = 0; pixel < LED_RING_PIXEL_NB; pixel += 1) {
-
-        int8_t index = this->current_effect.tick - pixel;
-        if (index < 0) {
-            index = LED_RING_PIXEL_NB + index;
-        } else if (index >= LED_RING_PIXEL_NB) {
-            index = LED_RING_PIXEL_NB;
+        int8_t tail_index = pixel - static_cast<int8_t>(this->current_effect.tick);
+        if (tail_index < 0) {
+            tail_index += LED_RING_PIXEL_NB;
         }
 
-        this->pixel_buffer[index] = this->apply_alpha(&this->current_effect.primary, intensities[index]);
+        this->pixel_buffer[pixel] = this->apply_alpha(&this->current_effect.primary, intensities[tail_index]);
     }
 
     return;
@@ -511,28 +517,39 @@ void LedsWS2812::effect_spin() {
 
 void LedsWS2812::effect_progress() {
 
-    // No ticks are updates are needed here. This function is only called on progress
-    // updates.
+    /*
+     * The value of the progress is only configured by the external signals.
+     * We limit to 100 to prevent from overflows.
+     */
+    if (this->current_effect.progress > 100) {
+        this->current_effect.progress = 100;
+    }
 
-    uint32_t total_brightness = this->current_effect.progress * LED_RING_PIXEL_NB;
+    uint8_t intensities[LED_RING_PIXEL_NB] = {0};
 
-    // Compute the target alpha
+    uint8_t step = 100 / LED_RING_PIXEL_NB;
+    uint8_t lum = this->current_effect.progress;
+
+    /*
+     * Compute the pixel update
+     */
     for (int pixel = 0; pixel < LED_RING_PIXEL_NB; pixel += 1) {
-        uint32_t pixel_start = pixel * LED_CORR_MAXVAL;
-
-        /*
-         * Select the intensity based on some
-         */
-        uint8_t intensity = 0;
-
-        if (total_brightness > (pixel_start + LED_CORR_MAXVAL)) {
-            intensity = LED_CORR_MAXVAL;
-        } else if (total_brightness > pixel_start) {
-            intensity = total_brightness - pixel_start;
+        if (lum > step) {
+            intensities[pixel] = gamma_lut[255];
+            lum -= step;
+        } else if (lum > 0) {
+            intensities[pixel] = (lum * LED_CORR_MAXVAL) / step;
+            lum = 0;
+        } else {
+            intensities[pixel] = 0;
         }
+    }
 
-        // Apply the pixel value
-        this->pixel_buffer[pixel] = this->apply_alpha(&this->current_effect.primary, gamma_lut[intensity]);
+    /*
+     * Update the luminances.
+     */
+    for (int pixel = 0; pixel < LED_RING_PIXEL_NB; pixel += 1) {
+        this->pixel_buffer[pixel] = this->apply_alpha(&this->current_effect.primary, intensities[pixel]);
     }
 
     return;
@@ -629,6 +646,7 @@ void LedsWS2812::effect_heartbeat() {
 inline Pixel LedsWS2812::apply_alpha(Pixel *input, uint8_t alpha) {
 
     Pixel output;
+    memset(&output, 0x00, sizeof(Pixel));
 
     output.aRGB.r = (uint8_t)(((uint32_t)input->aRGB.r * alpha) / 255);
     output.aRGB.g = (uint8_t)(((uint32_t)input->aRGB.g * alpha) / 255);

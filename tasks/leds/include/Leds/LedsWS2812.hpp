@@ -48,7 +48,7 @@ extern "C" {
 // -------------------------------------
 // Effects parameters
 #define WS2812_FLASH_PERIOD_MS     LEDS_T_Hz(5)
-#define WS2812_SPIN_PERIOD_MS      LEDS_T_Hz(20)
+#define WS2812_SPIN_PERIOD_MS      LEDS_T_Hz(2)
 #define WS2812_BREATHING_PERIOD_MS LEDS_T_Hz(30)
 
 #define WS2812_VU_METER_PERIOD_MS  LEDS_T_Hz(50)
