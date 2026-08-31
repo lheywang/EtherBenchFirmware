@@ -1,10 +1,11 @@
 /**
- * @file    task_programmer.cpp
+ * @file    JTAGTapEngine.hpp
  * @author  lheywang (leonard.heywang@proton.me)
- * @brief   Implement the programmer main task.
+ * @brief   Implement the JTAG TAP engine.
  * @version 0.1
  * @date    2026-08-31
  *
  * @copyright Copyright (c) 2026
  *
  */
+#pragma once

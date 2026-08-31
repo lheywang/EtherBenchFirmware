@@ -11,16 +11,23 @@ set(SOURCES
 	src/task_programmer.cpp
 )
 
-## Add the programming classes sources
+# Add the programming classes sources
 list(APPEND SOURCES
-	src/Programmer/Programmer.cpp
-	src/Programmer/HardwareProbeManager/HardwareProbeManager.cpp
-	src/Programmer/Probes/cJTAGProbe/cJTAGProbe.cpp
-	src/Programmer/Probes/ICSPProbe/ICSPProbe.cpp
-	src/Programmer/Probes/JTAGProbe/JTAGProbe.cpp
-	src/Programmer/Probes/SPIProbe/SPIProbe.cpp
-	src/Programmer/Probes/SWDProbe/SWDProbe.cpp
+    src/ProbeController/ProbeController.cpp
+    src/ProtocolController/ARMCoreSightSWDEngine.cpp
+    src/ProtocolController/JTAGTAPEngine.cpp
+    src/ProtocolController/MicrochipICSPEngine.cpp
+    src/ProtocolController/RawSPIEngine.cpp
+    src/TargetController/ARMTargetController.cpp
+    src/TargetController/RISCVTargetController.cpp
+)
 
+# Add the
+list(APPEND SOURCES 
+    src/servers/CMSIS/CmsisDAPServer.cpp
+    src/servers/GDB/GdbRspServer.cpp
+    src/servers/xSVF/xSVFServer.cpp
+    src/servers/XVC/XillinxXVCServer.cpp
 )
 
 # Creating the library

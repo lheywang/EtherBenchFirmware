@@ -1,7 +1,7 @@
 /**
- * @file    task_programmer.cpp
+ * @file    MicrochipISCPEngine.cpp
  * @author  lheywang (leonard.heywang@proton.me)
- * @brief   Implement the programmer main task.
+ * @brief   Implement the Microchip ICSP Protocol
  * @version 0.1
  * @date    2026-08-31
  *

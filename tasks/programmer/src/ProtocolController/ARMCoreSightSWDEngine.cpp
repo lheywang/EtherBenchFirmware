@@ -1,7 +1,7 @@
 /**
- * @file    task_programmer.cpp
+ * @file    ARMCoreSightSWDEngine.cpp
  * @author  lheywang (leonard.heywang@proton.me)
- * @brief   Implement the programmer main task.
+ * @brief   Implement the SWD programmer feature.
  * @version 0.1
  * @date    2026-08-31
  *
