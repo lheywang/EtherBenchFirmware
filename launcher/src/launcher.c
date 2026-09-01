@@ -32,6 +32,7 @@
 #include "task_leds.h"
 #include "task_muxer.h"
 #include "task_parser.h"
+#include "task_programmer.h"
 
 // STD
 #include <stdint.h>
@@ -209,7 +210,7 @@ uint32_t launcher(void) {
                      TX_AUTO_START);
 
     /*
-     * Creating the idle task
+     * Creating the parser task
      */
     tx_thread_create(&parser_thread,
                      "Parser",
@@ -223,7 +224,7 @@ uint32_t launcher(void) {
                      TX_AUTO_START);
 
     /*
-     * Creating the idle task
+     * Creating the leds task
      */
     tx_thread_create(&leds_thread,
                      "Leds control",
@@ -233,6 +234,20 @@ uint32_t launcher(void) {
                      IDLE_STACK_SIZE,
                      28,
                      28,
+                     TX_NO_TIME_SLICE,
+                     TX_AUTO_START);
+
+    /*
+     * Creating the leds task
+     */
+    tx_thread_create(&programmer_thread,
+                     "Programmer",
+                     programmer_task,
+                     0,
+                     programmer_stack,
+                     PROGRAMMER_STACK_SIZE,
+                     15,
+                     15,
                      TX_NO_TIME_SLICE,
                      TX_AUTO_START);
 

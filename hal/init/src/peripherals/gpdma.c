@@ -34,11 +34,22 @@ void MX_GPDMA1_Init(void) {
     HAL_NVIC_SetPriority(GPDMA1_Channel0_IRQn, 6, 3);
     HAL_NVIC_EnableIRQ(GPDMA1_Channel0_IRQn);
 
+    // SPI1 & 3 Init --> Programmer feature
+    HAL_NVIC_SetPriority(GPDMA1_Channel1_IRQn, 6, 1);
+    HAL_NVIC_EnableIRQ(GPDMA1_Channel1_IRQn);
+    HAL_NVIC_SetPriority(GPDMA1_Channel2_IRQn, 6, 1);
+    HAL_NVIC_EnableIRQ(GPDMA1_Channel2_IRQn);
+    HAL_NVIC_SetPriority(GPDMA1_Channel3_IRQn, 6, 1);
+    HAL_NVIC_EnableIRQ(GPDMA1_Channel3_IRQn);
+
     //  OCTOSPI --> NAND Flash
-    HAL_NVIC_SetPriority(GPDMA1_Channel5_IRQn, 6, 2);
-    HAL_NVIC_EnableIRQ(GPDMA1_Channel5_IRQn);
     HAL_NVIC_SetPriority(GPDMA1_Channel4_IRQn, 6, 2);
     HAL_NVIC_EnableIRQ(GPDMA1_Channel4_IRQn);
+    HAL_NVIC_SetPriority(GPDMA1_Channel5_IRQn, 6, 2);
+    HAL_NVIC_EnableIRQ(GPDMA1_Channel5_IRQn);
+
+    // Still 2 channel free
+
     return;
 }
 
@@ -51,5 +62,14 @@ void MX_GPDMA2_Init(void) {
     // WS2812 leds
     HAL_NVIC_SetPriority(GPDMA2_Channel0_IRQn, 6, 0);
     HAL_NVIC_EnableIRQ(GPDMA2_Channel0_IRQn);
+
+    // Hardware IOs
+    // 3 USARTs
+    // 1 SPI
+    // 1 I2C/I3C
+    // 1 CAN
+
+    // Analog
+
     return;
 }

@@ -14,6 +14,7 @@ set(SOURCES
 # Add the programming classes sources
 list(APPEND SOURCES
     src/ProbeController/ProbeController.cpp
+    src/ProbeController/ProbeConfig.cpp
     src/ProtocolController/ARMCoreSightSWDEngine.cpp
     src/ProtocolController/JTAGTAPEngine.cpp
     src/ProtocolController/MicrochipICSPEngine.cpp
