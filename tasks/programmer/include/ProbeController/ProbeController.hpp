@@ -36,6 +36,7 @@
 //                               VARIABLES
 // ======================================================================
 extern ProbeBoardConfig configV1;
+extern TX_SEMAPHORE programmer_dma;
 
 // ======================================================================
 //                               CLASS

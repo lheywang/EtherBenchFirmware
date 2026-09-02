@@ -17,6 +17,7 @@
 #include "ProbeController/ProbeController.hpp"
 
 // Other headers
+#include "ProbeController/ProbeConfig.hpp"
 #include "ProgrammerCommands.h"
 #include "logger.h"
 
@@ -38,6 +39,8 @@
 //                               VARIABLES
 // ======================================================================
 TX_SEMAPHORE programmer_dma;
+
+extern ProbeBoardConfig configV1; // from ProbeConfig
 
 // ======================================================================
 //                            PUBLIC CLASS
@@ -94,11 +97,11 @@ float ProbeController::getTargetVoltage() {
 
 bool ProbeController::setResetPin(const bool status) {
     if (status) {
-        LL_GPIO_SetOutputPin(RESET_PORT, RESET_PIN);
+        LL_GPIO_SetOutputPin(configV1.reset_pin.port, configV1.reset_pin.pin);
         return true;
     }
 
-    LL_GPIO_ResetOutputPin(RESET_PORT, RESET_PIN);
+    LL_GPIO_ResetOutputPin(configV1.reset_pin.port, configV1.reset_pin.pin);
     return true;
 }
 
@@ -194,12 +197,12 @@ uint32_t ProbeController::setBusFrequency(const uint32_t frequency) {
                                     LL_SPI_BAUDRATEPRESCALER_DIV128,
                                     LL_SPI_BAUDRATEPRESCALER_DIV256};
 
-    LL_SPI_Disable(SPIS_SPI_HANDLE);
-    LL_SPI_Disable(SPIM_SPI_HANDLE);
-    LL_SPI_SetBaudRatePrescaler(SPIS_SPI_HANDLE, ll_dividers[current_div]);
-    LL_SPI_SetBaudRatePrescaler(SPIM_SPI_HANDLE, ll_dividers[current_div]);
-    LL_SPI_Enable(SPIS_SPI_HANDLE);
-    LL_SPI_Enable(SPIM_SPI_HANDLE);
+    LL_SPI_Disable(configV1.spim.instance);
+    LL_SPI_Disable(configV1.spis.instance);
+    LL_SPI_SetBaudRatePrescaler(configV1.spim.instance, ll_dividers[current_div]);
+    LL_SPI_SetBaudRatePrescaler(configV1.spis.instance, ll_dividers[current_div]);
+    LL_SPI_Enable(configV1.spim.instance);
+    LL_SPI_Enable(configV1.spis.instance);
 
     /*
      * Return the current direction
@@ -213,13 +216,13 @@ bool ProbeController::toggleDirection() {
     case TargetProtocol::TARGET_PROTOCOL_SWD:
     case TargetProtocol::TARGET_PROTOCOL_SWDO:
         // Just do a simple exange here. No more than 10 CPU cycles.
-        LL_SPI_Disable(SPIM_SPI_HANDLE);
-        if (LL_SPI_GetTransferDirection(SPIM_SPI_HANDLE) == LL_SPI_HALF_DUPLEX_TX) {
-            LL_SPI_SetTransferDirection(SPIM_SPI_HANDLE, LL_SPI_HALF_DUPLEX_RX);
+        LL_SPI_Disable(configV1.spim.instance);
+        if (LL_SPI_GetTransferDirection(configV1.spim.instance) == LL_SPI_HALF_DUPLEX_TX) {
+            LL_SPI_SetTransferDirection(configV1.spim.instance, LL_SPI_HALF_DUPLEX_RX);
         } else {
-            LL_SPI_SetTransferDirection(SPIM_SPI_HANDLE, LL_SPI_HALF_DUPLEX_TX);
+            LL_SPI_SetTransferDirection(configV1.spim.instance, LL_SPI_HALF_DUPLEX_TX);
         }
-        LL_SPI_Enable(SPIM_SPI_HANDLE);
+        LL_SPI_Enable(configV1.spim.instance);
     default:
         // Nothing to do.
         break;
@@ -263,7 +266,8 @@ void ProbeController::initAsSWD() {
     /*
      * Enable the clock
      */
-    SPIM_CLOCK_ENABLE
+    configV1.spim.enableClock();
+
     /*
      * First, configure the IO
      */
@@ -273,15 +277,15 @@ void ProbeController::initAsSWD() {
     setup.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
     setup.Pull = LL_GPIO_PULL_NO;
 
-    setup.Pin = SPIM_SCLK_PIN;
-    setup.Alternate = SPIM_SCLK_AF;
-    if (LL_GPIO_Init(SPIM_SCLK_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spim.sclk.pin;
+    setup.Alternate = configV1.spim.sclk.af;
+    if (LL_GPIO_Init(configV1.spim.sclk.port, &setup) != SUCCESS) {
         LOG("Failed to configure SPIM SCLK Pin.");
     }
 
-    setup.Pin = SPIM_IO_PIN;
-    setup.Alternate = SPIM_IO_AF;
-    if (LL_GPIO_Init(SPIM_IO_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spim.mosi.pin;
+    setup.Alternate = configV1.spim.mosi.af;
+    if (LL_GPIO_Init(configV1.spim.mosi.port, &setup) != SUCCESS) {
         LOG("Failed to configure SPIM IO Pin.");
     }
 
@@ -300,12 +304,12 @@ void ProbeController::initAsSWD() {
     spim_config.BitOrder = LL_SPI_MSB_FIRST;
     spim_config.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
 
-    if (LL_SPI_Init(SPIM_SPI_HANDLE, &spim_config) != SUCCESS) {
+    if (LL_SPI_Init(configV1.spim.instance, &spim_config) != SUCCESS) {
         LOG("Failed to init the SPIM peripheral");
     }
 
-    LL_SPI_SetFIFOThreshold(SPIM_SPI_HANDLE, LL_SPI_FIFO_TH_01DATA);
-    LL_SPI_Enable(SPIM_SPI_HANDLE);
+    LL_SPI_SetFIFOThreshold(configV1.spim.instance, LL_SPI_FIFO_TH_01DATA);
+    LL_SPI_Enable(configV1.spim.instance);
 
     return;
 }
@@ -319,25 +323,25 @@ void ProbeController::deinitAsSWD() {
     setup.Pull = LL_GPIO_PULL_NO;
     setup.Mode = LL_GPIO_MODE_ANALOG;
 
-    setup.Pin = SPIM_SCLK_PIN;
-    if (LL_GPIO_Init(SPIM_SCLK_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spim.sclk.pin;
+    if (LL_GPIO_Init(configV1.spim.sclk.port, &setup) != SUCCESS) {
         LOG("Failed to reset SPIM SCLK Pin.");
     }
 
-    setup.Pin = SPIM_IO_PIN;
-    if (LL_GPIO_Init(SPIM_IO_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spim.mosi.pin;
+    if (LL_GPIO_Init(configV1.spim.mosi.port, &setup) != SUCCESS) {
         LOG("Failed to reset SPIM IO Pin.");
     }
 
     /*
      * Disable the peripheral
      */
-    LL_SPI_Disable(SPIM_SPI_HANDLE);
+    LL_SPI_Disable(configV1.spim.instance);
 
     /*
      * Disable the clocks
      */
-    SPIM_CLOCK_DISABLE
+    configV1.spim.disableClock();
 
     return;
 }
@@ -350,7 +354,7 @@ void ProbeController::initAsSWDO() {
 
     // SWDO Mode share the same logic as SWD + the serial input.
     this->initAsSWD();
-    SPIS_CLOCK_ENABLE
+    configV1.spis.enableClock();
 
     /*
      * TODO : Config here on the final board, as these feature are only supported the BGA chip.
@@ -369,20 +373,20 @@ void ProbeController::deinitAsSWDO() {
     setup.Pull = LL_GPIO_PULL_NO;
     setup.Mode = LL_GPIO_MODE_ANALOG;
 
-    setup.Pin = SPIS_MISO_PIN;
-    if (LL_GPIO_Init(SPIS_MISO_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spis.miso.pin;
+    if (LL_GPIO_Init(configV1.spis.miso.port, &setup) != SUCCESS) {
         LOG("Failed to reset SPIS MISO Pin.");
     }
 
     /*
      * Disable the peripheral
      */
-    LL_SPI_Disable(SPIS_SPI_HANDLE);
+    LL_SPI_Disable(configV1.spis.instance);
 
     /*
      * Disable the clocks
      */
-    SPIS_CLOCK_DISABLE
+    configV1.spis.disableClock();
 
     return;
 }
@@ -396,8 +400,8 @@ void ProbeController::initAsJTAG() {
     /*
      * Enable the clocks
      */
-    SPIM_CLOCK_ENABLE
-    SPIS_CLOCK_ENABLE
+    configV1.spim.enableClock();
+    configV1.spis.enableClock();
 
     /*
      * SPIM Pins config
@@ -408,33 +412,33 @@ void ProbeController::initAsJTAG() {
     setup.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
     setup.Pull = LL_GPIO_PULL_NO;
 
-    setup.Pin = SPIM_SCLK_PIN;
-    setup.Alternate = SPIM_SCLK_AF;
-    if (LL_GPIO_Init(SPIM_SCLK_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spim.sclk.pin;
+    setup.Alternate = configV1.spim.sclk.af;
+    if (LL_GPIO_Init(configV1.spim.sclk.port, &setup) != SUCCESS) {
         LOG("Failed to configure SPIM SCLK Pin.");
     }
-    setup.Pin = SPIM_IO_PIN;
-    setup.Alternate = SPIM_IO_AF;
-    if (LL_GPIO_Init(SPIM_IO_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spim.mosi.pin;
+    setup.Alternate = configV1.spim.mosi.af;
+    if (LL_GPIO_Init(configV1.spim.mosi.port, &setup) != SUCCESS) {
         LOG("Failed to configure SPIM IO Pin.");
     }
 
     /*
      * SPIS Pins config
      */
-    setup.Pin = SPIS_MOSI_PIN;
-    setup.Alternate = SPIS_MOSI_AF;
-    if (LL_GPIO_Init(SPIS_MOSI_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spis.mosi.pin;
+    setup.Alternate = configV1.spis.mosi.af;
+    if (LL_GPIO_Init(configV1.spis.mosi.port, &setup) != SUCCESS) {
         LOG("Failed to configure SPIS MOSI Pin.");
     }
-    setup.Pin = SPIS_MISO_PIN;
-    setup.Alternate = SPIS_MISO_AF;
-    if (LL_GPIO_Init(SPIS_MISO_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spis.miso.pin;
+    setup.Alternate = configV1.spis.miso.af;
+    if (LL_GPIO_Init(configV1.spis.miso.port, &setup) != SUCCESS) {
         LOG("Failed to configure SPIS MISO Pin.");
     }
-    setup.Pin = SPIS_SCLK_PIN;
-    setup.Alternate = SPIS_SCLK_AF;
-    if (LL_GPIO_Init(SPIS_SCLK_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spis.sclk.pin;
+    setup.Alternate = configV1.spis.sclk.af;
+    if (LL_GPIO_Init(configV1.spis.sclk.port, &setup) != SUCCESS) {
         LOG("Failed to configure SPIS SCLK Pin.");
     }
 
@@ -454,12 +458,12 @@ void ProbeController::initAsJTAG() {
     spim_config.BitOrder = LL_SPI_MSB_FIRST;
     spim_config.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
 
-    if (LL_SPI_Init(SPIM_SPI_HANDLE, &spim_config) != SUCCESS) {
+    if (LL_SPI_Init(configV1.spim.instance, &spim_config) != SUCCESS) {
         LOG("Failed to init the SPIM peripheral");
     }
 
-    LL_SPI_SetFIFOThreshold(SPIM_SPI_HANDLE, LL_SPI_FIFO_TH_01DATA);
-    LL_SPI_Enable(SPIM_SPI_HANDLE);
+    LL_SPI_SetFIFOThreshold(configV1.spim.instance, LL_SPI_FIFO_TH_01DATA);
+    LL_SPI_Enable(configV1.spim.instance);
 
     // SPI Slave
     LL_SPI_InitTypeDef spis_config = {};
@@ -474,12 +478,12 @@ void ProbeController::initAsJTAG() {
     spis_config.BitOrder = LL_SPI_MSB_FIRST;
     spis_config.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
 
-    if (LL_SPI_Init(SPIS_SPI_HANDLE, &spis_config) != SUCCESS) {
+    if (LL_SPI_Init(configV1.spis.instance, &spis_config) != SUCCESS) {
         LOG("Failed to init the SPIS peripheral");
     }
 
-    LL_SPI_SetFIFOThreshold(SPIS_SPI_HANDLE, LL_SPI_FIFO_TH_01DATA);
-    LL_SPI_Enable(SPIS_SPI_HANDLE);
+    LL_SPI_SetFIFOThreshold(configV1.spis.instance, LL_SPI_FIFO_TH_01DATA);
+    LL_SPI_Enable(configV1.spis.instance);
 }
 
 void ProbeController::deinitAsJTAG() {
@@ -492,38 +496,38 @@ void ProbeController::deinitAsJTAG() {
     setup.Pull = LL_GPIO_PULL_NO;
     setup.Mode = LL_GPIO_MODE_ANALOG;
 
-    setup.Pin = SPIM_SCLK_PIN;
-    if (LL_GPIO_Init(SPIM_SCLK_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spim.sclk.pin;
+    if (LL_GPIO_Init(configV1.spim.sclk.port, &setup) != SUCCESS) {
         LOG("Failed to reset SPIM SCLK Pin.");
     }
-    setup.Pin = SPIM_IO_PIN;
-    if (LL_GPIO_Init(SPIM_IO_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spim.mosi.pin;
+    if (LL_GPIO_Init(configV1.spim.mosi.port, &setup) != SUCCESS) {
         LOG("Failed to reset SPIM IO Pin.");
     }
-    setup.Pin = SPIS_SCLK_PIN;
-    if (LL_GPIO_Init(SPIS_SCLK_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spis.sclk.pin;
+    if (LL_GPIO_Init(configV1.spis.sclk.port, &setup) != SUCCESS) {
         LOG("Failed to reset SPIS SCLK Pin.");
     }
-    setup.Pin = SPIS_MOSI_PIN;
-    if (LL_GPIO_Init(SPIS_MOSI_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spis.mosi.pin;
+    if (LL_GPIO_Init(configV1.spis.mosi.port, &setup) != SUCCESS) {
         LOG("Failed to reset SPIS MOSI Pin.");
     }
-    setup.Pin = SPIS_MISO_PIN;
-    if (LL_GPIO_Init(SPIS_MISO_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spis.mosi.pin;
+    if (LL_GPIO_Init(configV1.spis.mosi.port, &setup) != SUCCESS) {
         LOG("Failed to reset SPIS MOSI Pin.");
     }
 
     /*
      * Finally, remove the clocks
      */
-    SPIM_CLOCK_DISABLE
-    SPIS_CLOCK_DISABLE
+    configV1.spim.disableClock();
+    configV1.spis.disableClock();
 
     /*
      * Disable the peripheral
      */
-    LL_SPI_Disable(SPIM_SPI_HANDLE);
-    LL_SPI_Disable(SPIS_SPI_HANDLE);
+    LL_SPI_Disable(configV1.spim.instance);
+    LL_SPI_Disable(configV1.spis.instance);
 }
 
 /* ----------------------------------------------------------------------
@@ -535,7 +539,7 @@ void ProbeController::initAsSPI() {
     /*
      * Enable the clock
      */
-    SPIS_CLOCK_ENABLE
+    configV1.spis.enableClock();
 
     /*
      * Wire the pins
@@ -546,19 +550,19 @@ void ProbeController::initAsSPI() {
     setup.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
     setup.Pull = LL_GPIO_PULL_NO;
 
-    setup.Pin = SPIS_MOSI_PIN;
-    setup.Alternate = SPIS_MOSI_AF;
-    if (LL_GPIO_Init(SPIS_MOSI_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spis.mosi.pin;
+    setup.Alternate = configV1.spis.mosi.af;
+    if (LL_GPIO_Init(configV1.spis.mosi.port, &setup) != SUCCESS) {
         LOG("Failed to configure SPIS MOSI Pin.");
     }
-    setup.Pin = SPIS_MISO_PIN;
-    setup.Alternate = SPIS_MISO_AF;
-    if (LL_GPIO_Init(SPIS_MISO_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spis.miso.pin;
+    setup.Alternate = configV1.spis.miso.af;
+    if (LL_GPIO_Init(configV1.spis.miso.port, &setup) != SUCCESS) {
         LOG("Failed to configure SPIS MISO Pin.");
     }
-    setup.Pin = SPIS_SCLK_PIN;
-    setup.Alternate = SPIS_SCLK_AF;
-    if (LL_GPIO_Init(SPIS_SCLK_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spis.sclk.pin;
+    setup.Alternate = configV1.spis.sclk.af;
+    if (LL_GPIO_Init(configV1.spis.sclk.port, &setup) != SUCCESS) {
         LOG("Failed to configure SPIS SCLK Pin.");
     }
 
@@ -577,12 +581,12 @@ void ProbeController::initAsSPI() {
     spis_config.BitOrder = LL_SPI_MSB_FIRST;
     spis_config.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
 
-    if (LL_SPI_Init(SPIS_SPI_HANDLE, &spis_config) != SUCCESS) {
+    if (LL_SPI_Init(configV1.spis.instance, &spis_config) != SUCCESS) {
         LOG("Failed to init the SPIS peripheral");
     }
 
-    LL_SPI_SetFIFOThreshold(SPIS_SPI_HANDLE, LL_SPI_FIFO_TH_01DATA);
-    LL_SPI_Enable(SPIS_SPI_HANDLE);
+    LL_SPI_SetFIFOThreshold(configV1.spis.instance, LL_SPI_FIFO_TH_01DATA);
+    LL_SPI_Enable(configV1.spis.instance);
 }
 
 void ProbeController::deinitAsSPI() {
@@ -592,28 +596,28 @@ void ProbeController::deinitAsSPI() {
     setup.Pull = LL_GPIO_PULL_NO;
     setup.Mode = LL_GPIO_MODE_ANALOG;
 
-    setup.Pin = SPIS_SCLK_PIN;
-    if (LL_GPIO_Init(SPIS_SCLK_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spis.sclk.pin;
+    if (LL_GPIO_Init(configV1.spis.sclk.port, &setup) != SUCCESS) {
         LOG("Failed to reset SPIS SCLK Pin.");
     }
-    setup.Pin = SPIS_MOSI_PIN;
-    if (LL_GPIO_Init(SPIS_MOSI_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spis.mosi.pin;
+    if (LL_GPIO_Init(configV1.spis.mosi.port, &setup) != SUCCESS) {
         LOG("Failed to reset SPIS MOSI Pin.");
     }
-    setup.Pin = SPIM_SCLK_PIN;
-    if (LL_GPIO_Init(SPIS_MISO_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.spis.miso.pin;
+    if (LL_GPIO_Init(configV1.spis.miso.port, &setup) != SUCCESS) {
         LOG("Failed to reset SPIS MOSI Pin.");
     }
 
     /*
      * Disable the clock
      */
-    SPIS_CLOCK_DISABLE
+    configV1.spis.disableClock();
 
     /*
      * Disable the peripheral
      */
-    LL_SPI_Disable(SPIS_SPI_HANDLE);
+    LL_SPI_Disable(configV1.spis.instance);
 }
 
 /* ----------------------------------------------------------------------
@@ -629,12 +633,12 @@ void ProbeController::initGPIO() {
     setup.Mode = LL_GPIO_MODE_INPUT;
     setup.Pull = LL_GPIO_PULL_UP;
 
-    setup.Pin = DETECT_PIN;
-    if (LL_GPIO_Init(DETECT_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.detect_pin.pin;
+    if (LL_GPIO_Init(configV1.detect_pin.port, &setup) != SUCCESS) {
         LOG("Failed to configure the DETECT pin");
     }
-    setup.Pin = KEY_PIN;
-    if (LL_GPIO_Init(KEY_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.key_pin.pin;
+    if (LL_GPIO_Init(configV1.key_pin.port, &setup) != SUCCESS) {
         LOG("Failed to configure the KEY pin");
     }
 
@@ -646,15 +650,15 @@ void ProbeController::initGPIO() {
     setup.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
     setup.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
 
-    setup.Pin = RESET_PIN;
-    if (LL_GPIO_Init(RESET_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.reset_pin.pin;
+    if (LL_GPIO_Init(configV1.reset_pin.port, &setup) != SUCCESS) {
         LOG("Failed to configure the RESET pin");
     }
 
     /*
      * Configure the default states
      */
-    LL_GPIO_SetOutputPin(RESET_PORT, RESET_PIN);
+    LL_GPIO_SetOutputPin(configV1.reset_pin.port, configV1.reset_pin.pin);
 
     return;
 }
@@ -668,16 +672,16 @@ void ProbeController::deinitGPIO() {
     setup.Pull = LL_GPIO_PULL_NO;
     setup.Mode = LL_GPIO_MODE_ANALOG;
 
-    setup.Pin = RESET_PIN;
-    if (LL_GPIO_Init(RESET_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.reset_pin.pin;
+    if (LL_GPIO_Init(configV1.reset_pin.port, &setup) != SUCCESS) {
         LOG("Failed to reset RESET Pin.");
     }
-    setup.Pin = KEY_PIN;
-    if (LL_GPIO_Init(KEY_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.key_pin.pin;
+    if (LL_GPIO_Init(configV1.key_pin.port, &setup) != SUCCESS) {
         LOG("Failed to reset KEY Pin.");
     }
-    setup.Pin = DETECT_PIN;
-    if (LL_GPIO_Init(DETECT_PORT, &setup) != SUCCESS) {
+    setup.Pin = configV1.reset_pin.pin;
+    if (LL_GPIO_Init(configV1.reset_pin.port, &setup) != SUCCESS) {
         LOG("Failed to reset DETECT Pin.");
     }
 
@@ -710,16 +714,16 @@ void ProbeController::deinitGPDMA() {}
  * ----------------------------------------------------------------------
  */
 void ProbeController::flushBuses() {
-    LL_SPI_Disable(SPIM_SPI_HANDLE);
-    LL_SPI_Disable(SPIS_SPI_HANDLE);
+    LL_SPI_Disable(configV1.spim.instance);
+    LL_SPI_Disable(configV1.spis.instance);
 
-    LL_SPI_ClearFlag_OVR(SPIM_SPI_HANDLE);
-    LL_SPI_ClearFlag_UDR(SPIM_SPI_HANDLE);
-    LL_SPI_ClearFlag_OVR(SPIS_SPI_HANDLE);
-    LL_SPI_ClearFlag_UDR(SPIS_SPI_HANDLE);
+    LL_SPI_ClearFlag_OVR(configV1.spim.instance);
+    LL_SPI_ClearFlag_UDR(configV1.spim.instance);
+    LL_SPI_ClearFlag_OVR(configV1.spis.instance);
+    LL_SPI_ClearFlag_UDR(configV1.spis.instance);
 
-    LL_SPI_Enable(SPIM_SPI_HANDLE);
-    LL_SPI_Enable(SPIS_SPI_HANDLE);
+    LL_SPI_Enable(configV1.spim.instance);
+    LL_SPI_Enable(configV1.spis.instance);
 
     return;
 }
